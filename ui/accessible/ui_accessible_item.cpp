@@ -10,13 +10,24 @@
 
 namespace Ui::Accessible {
 
+namespace {
+
+[[nodiscard]] RpWidget *ValidParent(RpWidget *parent) {
+	if (!parent) {
+		return nullptr;
+	}
+	return qobject_cast<RpWidget*>(parent);
+}
+
+} // namespace
+
 Item::Item(not_null<RpWidget*> parent, int index)
 : _parent(parent)
 , _index(index) {
 }
 
 bool Item::isValid() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_index < 0 || !parent || !parent->isVisible()) {
 		return false;
 	}
@@ -29,27 +40,27 @@ QObject *Item::object() const {
 }
 
 QWindow *Item::window() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	const auto w = parent ? parent->window() : nullptr;
 	return w ? w->windowHandle() : nullptr;
 }
 
 QAccessible::Role Item::role() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	return parent
 		? parent->accessibilityChildRole()
 		: QAccessible::Role();
 }
 
 QAccessible::State Item::state() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	return (parent && _index >= 0)
 		? parent->accessibilityChildState(_index)
 		: QAccessible::State();
 }
 
 QString Item::text(QAccessible::Text t) const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_index < 0 || !parent) {
 		return {};
 	}
@@ -68,7 +79,7 @@ void Item::setText(QAccessible::Text t, const QString &text) {
 }
 
 QRect Item::rect() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_index < 0 || !parent) {
 		return {};
 	}
@@ -80,7 +91,7 @@ QRect Item::rect() const {
 }
 
 int Item::childCount() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_index < 0 || !parent) {
 		return 0;
 	}
@@ -88,7 +99,7 @@ int Item::childCount() const {
 }
 
 QAccessibleInterface *Item::child(int index) const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	const auto columns = parent
 		? parent->accessibilityChildColumnCount(_index)
 		: 0;
@@ -124,7 +135,10 @@ QAccessibleInterface *Item::childAt(int x, int y) const {
 }
 
 QAccessibleInterface *Item::parent() const {
-	return QAccessible::queryAccessibleInterface(_parent.get());
+	if (const auto parent = ValidParent(_parent.get())) {
+		return QAccessible::queryAccessibleInterface(parent);
+	}
+	return nullptr;
 }
 
 SubItem::SubItem(not_null<RpWidget*> parent, int row, int column)
@@ -134,7 +148,7 @@ SubItem::SubItem(not_null<RpWidget*> parent, int row, int column)
 }
 
 bool SubItem::isValid() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_row < 0 || _column < 0 || !parent || !parent->isVisible()) {
 		return false;
 	}
@@ -148,13 +162,13 @@ QObject *SubItem::object() const {
 }
 
 QWindow *SubItem::window() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	const auto w = parent ? parent->window() : nullptr;
 	return w ? w->windowHandle() : nullptr;
 }
 
 QAccessible::Role SubItem::role() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	return parent
 		? parent->accessibilityChildSubItemRole()
 		: QAccessible::Role();
@@ -165,7 +179,7 @@ QAccessible::State SubItem::state() const {
 }
 
 QString SubItem::text(QAccessible::Text t) const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_row < 0 || _column < 0 || !parent) {
 		return {};
 	}
@@ -182,7 +196,7 @@ void SubItem::setText(QAccessible::Text t, const QString &text) {
 }
 
 QRect SubItem::rect() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (_row < 0 || !parent) {
 		return QRect();
 	}
@@ -210,7 +224,7 @@ QAccessibleInterface *SubItem::childAt(int x, int y) const {
 }
 
 QAccessibleInterface *SubItem::parent() const {
-	const auto parent = _parent.get();
+	const auto parent = ValidParent(_parent.get());
 	if (!parent) {
 		return nullptr;
 	}
