@@ -171,6 +171,11 @@ struct LineGeometry {
 	int width = 0;
 	bool elided = false;
 };
+struct LineLayoutInfo {
+	int top = 0;
+	int left = 0;
+	int width = 0;
+};
 struct GeometryDescriptor {
 	Fn<LineGeometry(int line)> layout;
 	bool breakEverywhere = false;
@@ -296,6 +301,8 @@ public:
 	[[nodiscard]] std::vector<int> countLineWidths(
 		int width,
 		LineWidthsOptions options) const;
+	[[nodiscard]] std::vector<LineLayoutInfo> countLinesGeometry(
+		int width) const;
 
 	struct DimensionsResult {
 		int width = 0;
@@ -411,6 +418,9 @@ public:
 
 	[[nodiscard]] int lineHeight() const;
 
+	[[nodiscard]] TextSelection linkRangeFor(
+		const ClickHandlerPtr &link) const;
+
 	void clear();
 
 private:
@@ -471,8 +481,8 @@ private:
 		FlagsChangeCallback flagsChangeCallback) const;
 
 	// Template method for countWidth(), countHeight(), countLineWidths().
-	// callback(lineWidth, lineBottom) will be called for all lines with:
-	// QFixed lineWidth, int lineBottom
+	// callback(lineWidth, lineBottom, lineLeft) will be called for all lines
+	// with: QFixed lineWidth, int lineBottom, int lineLeft
 	template <typename Callback>
 	void enumerateLines(
 		int w,

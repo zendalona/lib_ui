@@ -738,6 +738,37 @@ void String::setLink(uint16 index, const ClickHandlerPtr &link) {
 	}
 }
 
+TextSelection String::linkRangeFor(const ClickHandlerPtr &link) const {
+	if (!_extended || !link) {
+		return {};
+	}
+	const auto index = [&] {
+		const auto &links = _extended->links;
+		for (auto i = 0, count = int(links.size()); i != count; ++i) {
+			if (links[i] == link) {
+				return uint16(i + 1);
+			}
+		}
+		return uint16(0);
+	}();
+	if (!index) {
+		return {};
+	}
+	auto from = uint16(_text.size());
+	auto to = uint16(0);
+	for (auto i = 0, count = int(_blocks.size()); i != count; ++i) {
+		if (_blocks[i]->linkIndex() == index) {
+			const auto position = _blocks[i]->position();
+			const auto end = (i + 1 < count)
+				? _blocks[i + 1]->position()
+				: uint16(_text.size());
+			from = std::min(from, position);
+			to = std::max(to, end);
+		}
+	}
+	return (from < to) ? TextSelection{ from, to } : TextSelection{};
+}
+
 void String::setSpoilerRevealed(bool revealed, anim::type animated) {
 	const auto data = _extended ? _extended->spoiler.get() : nullptr;
 	if (!data) {
@@ -982,7 +1013,7 @@ String::DimensionsResult String::countDimensions(
 	if (request.lineWidths && request.reserve) {
 		result.lineWidths.reserve(request.reserve);
 	}
-	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom) {
+	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom, int) {
 		const auto width = lineWidth.ceil().toInt();
 		if (request.lineWidths) {
 			result.lineWidths.push_back(width);
@@ -1000,7 +1031,7 @@ int String::countWidth(int width, bool breakEverywhere) const {
 	}
 
 	QFixed maxLineWidth = 0;
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int) {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int, int) {
 		if (lineWidth > maxLineWidth) {
 			maxLineWidth = lineWidth;
 		}
@@ -1013,7 +1044,7 @@ int String::countHeight(int width, bool breakEverywhere) const {
 		return _minHeight;
 	}
 	int result = 0;
-	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom) {
+	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom, int) {
 		result = lineBottom;
 	});
 	return result;
@@ -1030,8 +1061,20 @@ std::vector<int> String::countLineWidths(
 	if (options.reserve) {
 		result.reserve(options.reserve);
 	}
-	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int) {
+	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int, int) {
 		result.push_back(lineWidth.ceil().toInt());
+	});
+	return result;
+}
+
+std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
+	auto result = std::vector<LineLayoutInfo>();
+	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft) {
+		result.push_back({
+			.top = lineBottom,
+			.left = lineLeft,
+			.width = lineWidth.ceil().toInt(),
+		});
 	});
 	return result;
 }
@@ -1122,7 +1165,7 @@ void String::enumerateLines(
 				--qlinesleft;
 			}
 			if (!hidden) {
-				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+				callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left());
 			}
 			if (lineElided) {
 				return withElided(true);
@@ -1171,7 +1214,7 @@ void String::enumerateLines(
 		if (qlinesleft > 0) {
 			--qlinesleft;
 		}
-		callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+		callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left());
 		if (lineElided) {
 			return withElided(true);
 		}
@@ -1194,7 +1237,8 @@ void String::enumerateLines(
 			: lineHeight;
 		callback(
 			lineLeft + lineWidth - widthLeft,
-			top + useLineHeight + qpadding.bottom());
+			top + useLineHeight + qpadding.bottom(),
+			lineLeft + qpadding.left());
 	}
 	return withElided(false);
 }
