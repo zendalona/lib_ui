@@ -363,7 +363,9 @@ QAccessibleInterface *RpWidget::accessibilityCreate() {
 }
 
 QAccessible::Role RpWidget::accessibilityRole() {
-	return QAccessible::Role::NoRole;
+	return (_accessibilityRoleOverride != QAccessible::Role::NoRole)
+		? _accessibilityRoleOverride
+		: QAccessible::Role::NoRole;
 }
 
 Qt::FocusPolicy RpWidget::accessibilityFocusPolicy() {

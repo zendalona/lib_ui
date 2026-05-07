@@ -5,6 +5,7 @@
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
 #include "ui/widgets/checkbox.h"
+#include "ui/rp_widget.h"
 
 #include "ui/effects/ripple_animation.h"
 #include "ui/screen_reader_mode.h"
@@ -959,6 +960,9 @@ void RadiobuttonGroup::setValue(int value) {
 void RadiobuttonGroup::registerButton(not_null<Radiobutton*> button) {
 	if (!base::contains(_buttons, button)) {
 		_buttons.push_back(button);
+	}
+	if (auto rpParent = qobject_cast<RpWidget*>(button->parentWidget())) {
+		rpParent->setAccessibilityRole(QAccessible::Grouping);
 	}
 }
 

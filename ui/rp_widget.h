@@ -433,6 +433,10 @@ public:
 	[[nodiscard]] virtual QString accessibilityChildSubItemValue(int row, int column) const;
 	void accessibilityChildFocused(int index);
 
+	void setAccessibilityRole(QAccessible::Role role) {
+		_accessibilityRoleOverride = role;
+	}
+
 protected:
 	// e - from enterEvent() of child RpWidget
 	virtual void leaveToChildEvent(QEvent *e, QWidget *child) {
@@ -461,6 +465,9 @@ protected:
 
 	template <typename OtherWidget, typename OtherTraits>
 	friend class RpWidgetBase;
+
+private:
+	QAccessible::Role _accessibilityRoleOverride = QAccessible::Role::NoRole;
 
 };
 
